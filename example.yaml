@@ -1,55 +1,95 @@
-# Minimal example: expose the Samsung EHS water law offset (NASA 0x4248)
-# as a writable number in Home Assistant.
-#
+# Example: Samsung EHS hydro unit (NASA address 20.00.00).
 # Only the parts relevant to this component are shown; keep your existing
 # esphome / esp32 / wifi / api / uart sections.
 
 external_components:
-  # The samsung_ac component that owns the bus. Pin a commit you have tested.
-  - source: github://omerfaruk-aran/esphome_samsung_hvac_bus@53b0773ada2fa0d392003dd46d77a8d655deb4ad
+  # samsung_ac with the NASA message listener hook (needed for reading values).
+  - source: github://marcoavesani/esphome_samsung_hvac_bus@nasa-message-listener
     components: [samsung_ac]
-  # This repository.
   - source: github://marcoavesani/samsung_hvac_nasa_esphome@main
     components: [samsung_nasa_write]
 
 samsung_ac:
-  id: samsung_ac_bus          # needed so samsung_nasa_write can find the bus
+  id: samsung_ac_bus
   flow_control_pin: GPIO4
   devices:
-    - address: "20.00.00"     # hydro unit
-      custom_sensor:
-        # Read back the offset the unit reports (0.1 °C, signed).
-        - name: "Water Law Offset Reported"
-          id: water_law_offset_reported
-          message: 0x4248
-          unit_of_measurement: "°C"
-          device_class: temperature
-          state_class: measurement
-          accuracy_decimals: 1
-          filters:
-            - lambda: return (int16_t)x;
-            - multiply: 0.1
+    - address: "20.00.00"
+      # Built into samsung_ac: limits the compressor frequency.
+      silence_mode:
+        name: "Silent Mode"
 
 number:
+  # Water law offset: modulate the heat pump without switching it off.
   - platform: samsung_nasa_write
     name: "Water Law Offset"
-    samsung_ac_id: samsung_ac_bus
-    address: "20.00.00"       # NASA address of the indoor/hydro unit
-    message: 0x4248           # VAR_IN_TEMP_WATER_LAW_TARGET_F (water law offset)
-    scale: 10                 # bus value = °C x 10
+    address: "20.00.00"
+    message: 0x4248
+    scale: 10
     min_value: -5
     max_value: 5
     step: 0.5
-    state_sensor: water_law_offset_reported   # mirror what the unit reports
-    min_write_interval: 30s   # never write more often than this
+    min_write_interval: 30s
     mode: box
     unit_of_measurement: "°C"
     device_class: temperature
 
-# Writing from a lambda (raw, already scaled value):
-# button:
-#   - platform: template
-#     name: "Water Law Offset 0"
-#     on_press:
-#       - lambda: |-
-#           esphome::samsung_nasa_write::write_message(id(samsung_ac_bus), "20.00.00", 0x4248, 0);
+  # FSV 3043: disinfection start hour (untested; power cycle may be needed).
+  - platform: samsung_nasa_write
+    name: "Disinfection Start Hour"
+    address: "20.00.00"
+    message: 0x4269
+    data_type: write
+    min_value: 0
+    max_value: 23
+    step: 1
+    poll_interval: 1h
+    mode: box
+    unit_of_measurement: "h"
+    entity_category: config
+
+select:
+  # FSV 3042: disinfection day (untested; power cycle may be needed).
+  - platform: samsung_nasa_write
+    name: "Disinfection Day"
+    address: "20.00.00"
+    message: 0x409A
+    data_type: write
+    poll_interval: 1h
+    entity_category: config
+    options:
+      0: Sunday
+      1: Monday
+      2: Tuesday
+      3: Wednesday
+      4: Thursday
+      5: Friday
+      6: Saturday
+      7: Every day
+
+switch:
+  # FSV 3041: disinfection on/off (untested).
+  - platform: samsung_nasa_write
+    name: "Disinfection"
+    address: "20.00.00"
+    message: 0x4099
+    data_type: write
+    poll_interval: 1h
+    entity_category: config
+
+sensor:
+  # Read an FSV that is never broadcast.
+  - platform: samsung_nasa_write
+    name: "FSV 3044 Disinfection Target"
+    address: "20.00.00"
+    message: 0x426A
+    scale: 10
+    poll_interval: 1h
+    unit_of_measurement: "°C"
+    entity_category: diagnostic
+
+button:
+  - platform: samsung_nasa_write
+    name: "Water Law Offset Reset"
+    address: "20.00.00"
+    message: 0x4248
+    value: 0
