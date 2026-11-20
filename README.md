@@ -30,14 +30,14 @@ Writing works with any `samsung_ac`. **Reading** (the `sensor` platform,
 reports) needs a `samsung_ac` that lets other components see every decoded
 NASA message, including `Response` packets. That is a small patch
 (`add_nasa_message_listener`, ~40 lines) available on the
-[`nasa-message-listener` branch of this fork](https://github.com/marcoavesani/esphome_samsung_hvac_bus/tree/nasa-message-listener)
+[`main` branch of this fork](https://github.com/marcoavesani/esphome_samsung_hvac_bus)
 and proposed upstream. The component detects it automatically; without it,
 read options are rejected at config time with a clear error.
 
 ```yaml
 external_components:
   # samsung_ac with the listener hook
-  - source: github://marcoavesani/esphome_samsung_hvac_bus@nasa-message-listener
+  - source: github://marcoavesani/esphome_samsung_hvac_bus@main
     components: [samsung_ac]
   - source: github://marcoavesani/samsung_hvac_nasa_esphome@main
     components: [samsung_nasa_write]

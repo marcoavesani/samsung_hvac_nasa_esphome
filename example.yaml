@@ -4,7 +4,7 @@
 
 external_components:
   # samsung_ac with the NASA message listener hook (needed for reading values).
-  - source: github://marcoavesani/esphome_samsung_hvac_bus@nasa-message-listener
+  - source: github://marcoavesani/esphome_samsung_hvac_bus@main
     components: [samsung_ac]
   - source: github://marcoavesani/samsung_hvac_nasa_esphome@main
     components: [samsung_nasa_write]
