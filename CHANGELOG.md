@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 (2026-11-20)
+
+- Read requests are sent once (`publish_data_once`): the unit answers with a
+  Response, not an Ack, so `publish_data()` retried every read and logged
+  "Packet sending timeout", and each value arrived twice.
+
 ## 0.2.0 (2026-11-20)
 
 - New platforms: `sensor` (read only), `select`, `switch`, `button`.

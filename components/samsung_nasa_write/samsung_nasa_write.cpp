@@ -30,7 +30,10 @@ void read_message(samsung_ac::Samsung_AC *bus, const std::string &address, uint1
   auto packet = samsung_ac::Packet::create(samsung_ac::Address::parse(address), samsung_ac::DataType::Read,
                                            static_cast<samsung_ac::MessageNumber>(message), 0);
   ESP_LOGV(TAG, "Read %s 0x%04X", address.c_str(), message);
-  bus->publish_data(packet.command.packetNumber, packet.encode());
+  // The unit answers a Read with a Response, not with an Ack. publish_data()
+  // would wait for an Ack, retry and log a timeout, so send it once instead
+  // (same as samsung_ac does for its own display-light reads).
+  bus->publish_data_once(packet.command.packetNumber, packet.encode(), []() {});
 }
 
 int64_t decode_value(uint16_t message, long raw, bool is_signed) {
